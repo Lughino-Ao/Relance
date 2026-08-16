@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord — RelanceFacile{% endblock %}
+{% block content %}
+<div class="dashboard-header">
+    <h1>Tableau de bord</h1>
+    <a href="{{ url_for('new_invoice') }}" class="btn-primary">+ Nouvelle facture</a>
+</div>
+
+{% if subscription_status != 'active' %}
+<div class="plan-banner">
+    Plan gratuit — {{ free_limit }} factures/mois. <a href="{{ url_for('upgrade') }}">Passer au plan illimité</a>
+</div>
+{% endif %}
+
+<p class="stat">{{ unpaid_count }} facture(s) impayée(s)</p>
+
+{% if invoices %}
+<table class="invoice-table">
+    <thead>
+        <tr>
+            <th>Client</th>
+            <th>Description</th>
+            <th>Montant</th>
+            <th>Échéance</th>
+            <th>Statut</th>
+            <th>Relance</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for inv in invoices %}
+        <tr class="{{ 'row-paid' if inv.status == 'paid' else '' }}">
+            <td>{{ inv.client_name }}</td>
+            <td>{{ inv.description }}</td>
+            <td>{{ "%.2f"|format(inv.amount) }} {{ inv.currency }}</td>
+            <td>{{ inv.due_date }}</td>
+            <td>
+                {% if inv.status == 'paid' %}
+                    <span class="badge badge-paid">Payée</span>
+                {% else %}
+                    <span class="badge badge-unpaid">Impayée</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if inv.wa_link %}
+                    <a href="{{ inv.wa_link }}" target="_blank" rel="noopener" class="btn-whatsapp">
+                        Relancer ({{ inv.stage }})
+                    </a>
+                {% elif inv.status == 'unpaid' %}
+                    <span class="muted">Pas encore en retard</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if inv.status == 'unpaid' %}
+                <form method="POST" action="{{ url_for('mark_paid', invoice_id=inv.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn-small">Marquer payée</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>Aucune facture pour l'instant. <a href="{{ url_for('new_invoice') }}">Crée ta première facture</a>.</p>
+{% endif %}
+{% endblock %}

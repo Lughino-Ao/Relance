@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Créer un compte — RelanceFacile{% endblock %}
+{% block content %}
+<div class="form-card">
+    <h1>Créer un compte</h1>
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="field">
+            {{ form.email.label }}
+            {{ form.email(autocomplete="email") }}
+            {% for error in form.email.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </div>
+        <div class="field">
+            {{ form.password.label }}
+            {{ form.password(autocomplete="new-password") }}
+            {% for error in form.password.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </div>
+        <div class="field">
+            {{ form.confirm.label }}
+            {{ form.confirm(autocomplete="new-password") }}
+            {% for error in form.confirm.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </div>
+        <button type="submit" class="btn-primary">Créer mon compte</button>
+    </form>
+    <p>Déjà inscrit ? <a href="{{ url_for('login') }}">Connecte-toi</a></p>
+</div>
+{% endblock %}

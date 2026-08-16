@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}RelanceFacile — Arrêtez de courir après vos clients{% endblock %}
+{% block content %}
+<section class="hero">
+    <h1>Arrêtez de courir après vos clients.</h1>
+    <p class="subtitle">Créez une facture en 1 minute. On calcule les relances à votre place.</p>
+    <a href="{{ url_for('register') }}" class="btn-primary">Créer mon compte gratuit</a>
+</section>
+
+<section class="pain">
+    <h2>Vous facturez sur WhatsApp. Vous oubliez de relancer. Vous perdez de l'argent.</h2>
+    <p>Chaque mois, des factures impayées traînent parce que personne n'a le temps de se souvenir de qui doit quoi, et depuis quand.</p>
+</section>
+
+<section class="features">
+    <div class="feature">
+        <h3>Facturation en 1 minute</h3>
+        <p>Client, montant, échéance. Rien de plus.</p>
+    </div>
+    <div class="feature">
+        <h3>Relances calculées automatiquement</h3>
+        <p>Le système sait quand relancer et avec quel ton — poli, puis ferme, puis final.</p>
+    </div>
+    <div class="feature">
+        <h3>Envoi en 1 clic via WhatsApp</h3>
+        <p>Le message est prêt, vous cliquez, il part. Zéro coût, zéro app tierce à configurer.</p>
+    </div>
+</section>
+
+<section class="pricing-preview">
+    <h2>Tarification simple</h2>
+    <div class="pricing-cards">
+        <div class="price-card">
+            <h3>Gratuit</h3>
+            <p class="price">0 / mois</p>
+            <p>5 factures par mois</p>
+        </div>
+        <div class="price-card featured">
+            <h3>Solo</h3>
+            <p class="price">7$ / mois</p>
+            <p>Factures illimitées</p>
+        </div>
+    </div>
+    <a href="{{ url_for('register') }}" class="btn-primary">Commencer gratuitement</a>
+</section>
+{% endblock %}

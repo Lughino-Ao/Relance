@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Nouvelle facture — RelanceFacile{% endblock %}
+{% block content %}
+<div class="form-card">
+    <h1>Nouvelle facture</h1>
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="field">
+            {{ form.client_id.label }}
+            {{ form.client_id() }}
+        </div>
+        <div class="field">
+            {{ form.description.label }}
+            {{ form.description() }}
+            {% for error in form.description.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </div>
+        <div class="field">
+            {{ form.amount.label }}
+            {{ form.amount() }}
+            {% for error in form.amount.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </div>
+        <div class="field">
+            {{ form.currency.label }}
+            {{ form.currency() }}
+        </div>
+        <div class="field">
+            {{ form.due_date.label }}
+            {{ form.due_date() }}
+            {% for error in form.due_date.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </div>
+        <button type="submit" class="btn-primary">Créer la facture</button>
+    </form>
+</div>
+{% endblock %}

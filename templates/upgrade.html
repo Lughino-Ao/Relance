@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Abonnement — RelanceFacile{% endblock %}
+{% block content %}
+<div class="form-card">
+    <h1>Passer au plan Solo</h1>
+    <p>7$/mois — factures illimitées, personnalisation des messages de relance.</p>
+    {% if payment_link %}
+        <a href="{{ payment_link }}" target="_blank" rel="noopener" class="btn-primary">Payer avec Stripe</a>
+    {% else %}
+        <p class="muted">
+            Le lien de paiement n'est pas encore configuré. Définis la variable
+            d'environnement <code>STRIPE_PAYMENT_LINK</code> avec ton propre
+            Stripe Payment Link (créé gratuitement dans le dashboard Stripe).
+        </p>
+    {% endif %}
+    <p class="muted">
+        Note : l'activation du statut "payant" sur ce compte reste manuelle
+        en V1 (pas de webhook Stripe connecté). Après paiement, l'activation
+        se fait actuellement en base de données par l'administrateur — c'est
+        la limite assumée de cette version concierge.
+    </p>
+</div>
+{% endblock %}
