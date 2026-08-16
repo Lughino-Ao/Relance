@@ -39,6 +39,14 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 # décommentez la ligne suivante :
 # app.config["SESSION_COOKIE_SECURE"] = True
 
+# app.config["SESSION_COOKIE_SECURE"] = True
+
+# Initialisation automatique de la base au démarrage du serveur.
+# Nécessaire sur Render tier gratuit, où l'onglet "Shell" n'est pas
+# disponible sans abonnement payant. CREATE TABLE IF NOT EXISTS rend
+# cette opération sans danger à répéter à chaque redémarrage.
+init_db()
+
 csrf = CSRFProtect(app)
 
 login_manager = LoginManager(app)
