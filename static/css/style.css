@@ -189,6 +189,17 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; font-weight: 600; letter-s
 .field input:focus, .field select:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
 .error { color: var(--danger); font-size: 0.85rem; }
 
+.password-field { position: relative; }
+.password-field input { padding-right: 40px; }
+.toggle-password {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); padding: 6px; display: flex; align-items: center;
+    border-radius: 4px;
+}
+.toggle-password:hover { color: var(--ink-deep); }
+.toggle-password:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
 .strength-meter { margin-top: 8px; display: flex; align-items: center; gap: 10px; }
 .strength-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
 .strength-bar span { display: block; height: 100%; width: 0%; border-radius: 3px; transition: width 0.2s ease, background 0.2s ease; }

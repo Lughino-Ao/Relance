@@ -12,7 +12,12 @@
         </div>
         <div class="field">
             {{ form.password.label }}
-            {{ form.password(autocomplete="current-password") }}
+            <div class="password-field">
+                {{ form.password(autocomplete="current-password") }}
+                <button type="button" class="toggle-password" aria-label="Afficher le mot de passe" aria-pressed="false" onclick="togglePasswordVisibility(this)">
+                    <svg class="icon-eye" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
             {% for error in form.password.errors %}<span class="error">{{ error }}</span>{% endfor %}
         </div>
         <button type="submit" class="btn-primary">Se connecter</button>
