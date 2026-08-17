@@ -31,11 +31,14 @@
     <thead><tr><th>Nom</th><th>Téléphone</th><th>Email</th></tr></thead>
     <tbody>
         {% for c in clients %}
-        <tr><td>{{ c.name }}</td><td>{{ c.phone }}</td><td>{{ c.email or "—" }}</td></tr>
+        <tr><td>{{ c.name }}</td><td class="mono">{{ c.phone }}</td><td>{{ c.email or "—" }}</td></tr>
         {% endfor %}
     </tbody>
 </table>
 {% else %}
-<p>Aucun client pour l'instant.</p>
+<div class="empty-state">
+    <h3>Aucun client pour l'instant</h3>
+    <p>Ajoute ton premier client ci-dessus pour pouvoir lui créer une facture.</p>
+</div>
 {% endif %}
 {% endblock %}

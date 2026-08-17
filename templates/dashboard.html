@@ -12,7 +12,31 @@
 </div>
 {% endif %}
 
+<div class="totals-row">
+    <div class="total-box">
+        <span class="total-label">Facturé au total</span>
+        <span class="total-value mono">{{ "%.0f"|format(totals.total_invoiced) }}</span>
+    </div>
+    <div class="total-box total-paid">
+        <span class="total-label">Encaissé</span>
+        <span class="total-value mono">{{ "%.0f"|format(totals.total_paid) }}</span>
+    </div>
+    <div class="total-box total-unpaid">
+        <span class="total-label">En attente</span>
+        <span class="total-value mono">{{ "%.0f"|format(totals.total_unpaid) }}</span>
+    </div>
+</div>
+<p class="muted" style="margin-top:-8px;">Toutes devises confondues — évite de mélanger XOF/USD/EUR si tu veux des totaux exacts.</p>
+
+<div class="filter-tabs">
+    <a href="{{ url_for('dashboard', filter='all') }}" class="{{ 'active' if current_filter == 'all' }}">Toutes</a>
+    <a href="{{ url_for('dashboard', filter='unpaid') }}" class="{{ 'active' if current_filter == 'unpaid' }}">Impayées</a>
+    <a href="{{ url_for('dashboard', filter='paid') }}" class="{{ 'active' if current_filter == 'paid' }}">Payées</a>
+</div>
+
+{% if unpaid_count is not none %}
 <p class="stat">{{ unpaid_count }} facture(s) impayée(s)</p>
+{% endif %}
 
 {% if invoices %}
 <table class="invoice-table">
@@ -32,7 +56,7 @@
         <tr class="{{ 'row-paid' if inv.status == 'paid' else '' }}">
             <td>{{ inv.client_name }}</td>
             <td>{{ inv.description }}</td>
-            <td>{{ "%.2f"|format(inv.amount) }} {{ inv.currency }}</td>
+            <td class="amount">{{ "%.2f"|format(inv.amount) }} {{ inv.currency }}</td>
             <td>{{ inv.due_date }}</td>
             <td>
                 {% if inv.status == 'paid' %}
@@ -63,6 +87,18 @@
     </tbody>
 </table>
 {% else %}
-<p>Aucune facture pour l'instant. <a href="{{ url_for('new_invoice') }}">Crée ta première facture</a>.</p>
+<div class="empty-state">
+    {% if current_filter == 'paid' %}
+        <h3>Aucune facture payée pour l'instant</h3>
+        <p>Les factures marquées "payée" apparaîtront ici.</p>
+    {% elif current_filter == 'unpaid' %}
+        <h3>Aucune facture impayée</h3>
+        <p>Tout est à jour !</p>
+    {% else %}
+        <h3>Aucune facture pour l'instant</h3>
+        <p>Crée ta première facture pour voir apparaître ici le suivi des relances.</p>
+        <a href="{{ url_for('new_invoice') }}" class="btn-primary" style="margin-top:14px;">+ Créer ma première facture</a>
+    {% endif %}
+</div>
 {% endif %}
 {% endblock %}

@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     subscription_status TEXT NOT NULL DEFAULT 'free',
+    email_confirmed INTEGER NOT NULL DEFAULT 0,
+    confirm_token TEXT,
+    confirm_token_created_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

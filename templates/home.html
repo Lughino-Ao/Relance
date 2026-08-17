@@ -3,8 +3,40 @@
 {% block content %}
 <section class="hero">
     <h1>Arrêtez de courir après vos clients.</h1>
-    <p class="subtitle">Créez une facture en 1 minute. On calcule les relances à votre place.</p>
+    <p class="subtitle">Créez une facture en 1 minute. On calcule le bon moment et le bon ton pour relancer — vous cliquez, WhatsApp fait le reste.</p>
     <a href="{{ url_for('register') }}" class="btn-primary">Créer mon compte gratuit</a>
+
+    <div class="demo-card" id="demoCard">
+        <div class="demo-stamp" id="demoStamp">PAYÉE</div>
+        <div class="demo-row"><span>Client</span><span class="mono">Awa Client</span></div>
+        <div class="demo-row"><span>Facture</span><span class="mono">Site web vitrine</span></div>
+        <div class="demo-amount">50 000 XOF</div>
+        <span class="demo-stage-label" id="demoStageLabel">Échéance dépassée de 3 jours</span>
+        <div class="demo-message" id="demoMessage"></div>
+    </div>
+    <div class="demo-controls" id="demoControls"></div>
+    <p class="demo-hint" id="demoHint">Cliquez sur les points pour voir comment le ton change avec le retard</p>
+</section>
+
+<section class="how-it-works">
+    <h2 style="text-align:center;">Comment ça marche</h2>
+    <div class="steps-row">
+        <div class="step">
+            <span class="step-number">1</span>
+            <h3>Crée ton compte</h3>
+            <p>Email et mot de passe, confirmation en un clic. 30 secondes.</p>
+        </div>
+        <div class="step">
+            <span class="step-number">2</span>
+            <h3>Ajoute un client et facture-le</h3>
+            <p>Nom, téléphone WhatsApp, montant, échéance. C'est tout.</p>
+        </div>
+        <div class="step">
+            <span class="step-number">3</span>
+            <h3>Relance en un clic quand c'est en retard</h3>
+            <p>Le message est déjà écrit avec le bon ton. Tu cliques, WhatsApp s'ouvre, tu envoies.</p>
+        </div>
+    </div>
 </section>
 
 <section class="pain">
@@ -14,16 +46,19 @@
 
 <section class="features">
     <div class="feature">
-        <h3>Facturation en 1 minute</h3>
-        <p>Client, montant, échéance. Rien de plus.</p>
+        <span class="eyebrow">Facturation</span>
+        <h3>1 minute, pas plus</h3>
+        <p>Client, montant, échéance. Rien de plus à remplir.</p>
     </div>
     <div class="feature">
-        <h3>Relances calculées automatiquement</h3>
-        <p>Le système sait quand relancer et avec quel ton — poli, puis ferme, puis final.</p>
+        <span class="eyebrow">Suivi</span>
+        <h3>Le bon ton, au bon moment</h3>
+        <p>Poli à J+3, ferme à J+10, final à J+20 — calculé automatiquement.</p>
     </div>
     <div class="feature">
-        <h3>Envoi en 1 clic via WhatsApp</h3>
-        <p>Le message est prêt, vous cliquez, il part. Zéro coût, zéro app tierce à configurer.</p>
+        <span class="eyebrow">Envoi</span>
+        <h3>1 clic, direction WhatsApp</h3>
+        <p>Le message est déjà écrit. Vous cliquez, il part. Zéro coût.</p>
     </div>
 </section>
 
@@ -43,4 +78,89 @@
     </div>
     <a href="{{ url_for('register') }}" class="btn-primary">Commencer gratuitement</a>
 </section>
+
+<script>
+(function () {
+    var stages = [
+        {
+            label: "Échéance dépassée de 3 jours",
+            badge: "poli",
+            message: "Bonjour Awa Client, petit rappel amical : la facture \"Site web vitrine\" de 50000.00 XOF était due le 04/08. Merci de me confirmer le règlement quand vous pourrez !"
+        },
+        {
+            label: "Échéance dépassée de 10 jours",
+            badge: "ferme",
+            message: "Bonjour Awa Client, la facture \"Site web vitrine\" de 50000.00 XOF est en retard depuis plusieurs jours (échéance le 04/08). Pourriez-vous régulariser rapidement ? Merci."
+        },
+        {
+            label: "Échéance dépassée de 20 jours",
+            badge: "final",
+            message: "Bonjour Awa Client, ceci est un dernier rappel concernant la facture \"Site web vitrine\" de 50000.00 XOF, échue le 04/08. Merci de procéder au règlement sous peu."
+        },
+        {
+            label: "Marquée payée",
+            badge: "payee",
+            message: "Facture réglée. Plus aucune relance ne sera envoyée pour ce client."
+        }
+    ];
+
+    var labelEl = document.getElementById("demoStageLabel");
+    var messageEl = document.getElementById("demoMessage");
+    var stampEl = document.getElementById("demoStamp");
+    var controlsEl = document.getElementById("demoControls");
+    var hintEl = document.getElementById("demoHint");
+    var current = 0;
+    var autoplayTimer = null;
+
+    function render(index) {
+        var stage = stages[index];
+        labelEl.textContent = stage.label;
+        labelEl.className = "demo-stage-label stage-" + stage.badge;
+        messageEl.style.opacity = 0;
+        setTimeout(function () {
+            messageEl.textContent = stage.message;
+            messageEl.style.opacity = 1;
+        }, 120);
+
+        if (stage.badge === "payee") {
+            stampEl.classList.add("show");
+        } else {
+            stampEl.classList.remove("show");
+        }
+
+        var dots = controlsEl.querySelectorAll(".demo-dot");
+        dots.forEach(function (dot, i) {
+            dot.classList.toggle("active", i === index);
+        });
+    }
+
+    stages.forEach(function (_, i) {
+        var dot = document.createElement("button");
+        dot.className = "demo-dot" + (i === 0 ? " active" : "");
+        dot.setAttribute("aria-label", "Voir l'étape " + (i + 1));
+        dot.addEventListener("click", function () {
+            current = i;
+            render(current);
+            clearInterval(autoplayTimer);
+            hintEl.textContent = "Cliquez sur les points pour rejouer les étapes";
+        });
+        controlsEl.appendChild(dot);
+    });
+
+    render(0);
+
+    // Petit défilement automatique une seule fois, pour montrer le concept
+    // sans qu'on ait à deviner qu'il faut cliquer.
+    var prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!prefersReducedMotion) {
+        autoplayTimer = setInterval(function () {
+            current = (current + 1) % stages.length;
+            render(current);
+            if (current === stages.length - 1) {
+                clearInterval(autoplayTimer);
+            }
+        }, 2200);
+    }
+})();
+</script>
 {% endblock %}

@@ -12,7 +12,12 @@
         </div>
         <div class="field">
             {{ form.password.label }}
-            {{ form.password(autocomplete="new-password") }}
+            {{ form.password(autocomplete="new-password", id="password", oninput="updateStrength()") }}
+            <span class="field-hint">8 caractères min., avec majuscule, minuscule et chiffre.</span>
+            <div class="strength-meter" id="strengthMeter">
+                <div class="strength-bar"><span id="strengthFill"></span></div>
+                <span class="strength-label" id="strengthLabel"></span>
+            </div>
             {% for error in form.password.errors %}<span class="error">{{ error }}</span>{% endfor %}
         </div>
         <div class="field">
@@ -24,4 +29,30 @@
     </form>
     <p>Déjà inscrit ? <a href="{{ url_for('login') }}">Connecte-toi</a></p>
 </div>
+
+<script>
+function updateStrength() {
+    var value = document.getElementById("password").value;
+    var score = 0;
+    if (value.length >= 8) score++;
+    if (/[A-Z]/.test(value)) score++;
+    if (/[a-z]/.test(value)) score++;
+    if (/[0-9]/.test(value)) score++;
+    if (value.length >= 12) score++;
+
+    var levels = [
+        { pct: 0,   label: "",            cls: "" },
+        { pct: 20,  label: "Très faible",  cls: "weak" },
+        { pct: 40,  label: "Faible",       cls: "weak" },
+        { pct: 60,  label: "Moyen",        cls: "medium" },
+        { pct: 80,  label: "Bon",          cls: "good" },
+        { pct: 100, label: "Excellent",    cls: "good" }
+    ];
+    var level = levels[value.length === 0 ? 0 : score];
+    var fill = document.getElementById("strengthFill");
+    fill.style.width = level.pct + "%";
+    fill.className = level.cls;
+    document.getElementById("strengthLabel").textContent = level.label;
+}
+</script>
 {% endblock %}

@@ -1,7 +1,8 @@
 import os
 import re
+import secrets
 import urllib.parse
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from flask import Flask, render_template, redirect, url_for, request, flash, abort
 from flask_login import (
@@ -11,10 +12,11 @@ from flask_login import (
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect
 from wtforms import StringField, PasswordField, FloatField, DateField, SelectField
-from wtforms.validators import DataRequired, Email, Length, NumberRange, EqualTo
+from wtforms.validators import DataRequired, Email, Length, NumberRange, EqualTo, ValidationError
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from db import get_db, init_db
+import mail as mailer
 
 FREE_INVOICE_LIMIT = 5
 
@@ -39,6 +41,14 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 # décommentez la ligne suivante :
 # app.config["SESSION_COOKIE_SECURE"] = True
 
+# Initialisation automatique de la base au démarrage du serveur.
+# Nécessaire sur Render tier gratuit, où l'onglet "Shell" (qui permettait
+# de lancer init_db() manuellement) n'est pas disponible sans abonnement
+# payant. CREATE TABLE IF NOT EXISTS rend cette opération sans danger à
+# répéter à chaque redémarrage : elle ne touche jamais aux données déjà
+# présentes.
+init_db()
+
 csrf = CSRFProtect(app)
 
 login_manager = LoginManager(app)
@@ -50,6 +60,21 @@ STAGES = [
     (10, "ferme"),
     (20, "final"),
 ]
+
+CONFIRM_TOKEN_VALIDITY_HOURS = 24
+
+
+def strong_password(form, field):
+    """Exige au moins 8 caractères, une majuscule, une minuscule et un chiffre."""
+    value = field.data or ""
+    if len(value) < 8:
+        raise ValidationError("8 caractères minimum.")
+    if not re.search(r"[A-Z]", value):
+        raise ValidationError("Ajoute au moins une majuscule.")
+    if not re.search(r"[a-z]", value):
+        raise ValidationError("Ajoute au moins une minuscule.")
+    if not re.search(r"[0-9]", value):
+        raise ValidationError("Ajoute au moins un chiffre.")
 
 MESSAGES = {
     "poli": (
@@ -78,6 +103,7 @@ class User(UserMixin):
         self.email = row["email"]
         self.password_hash = row["password_hash"]
         self.subscription_status = row["subscription_status"]
+        self.email_confirmed = bool(row["email_confirmed"])
 
 
 @login_manager.user_loader
@@ -91,7 +117,7 @@ def load_user(user_id):
 
 class RegisterForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired(), Email(), Length(max=255)])
-    password = PasswordField("Mot de passe", validators=[DataRequired(), Length(min=8, message="8 caractères minimum.")])
+    password = PasswordField("Mot de passe", validators=[DataRequired(), strong_password])
     confirm = PasswordField("Confirmer", validators=[DataRequired(), EqualTo("password", message="Les mots de passe ne correspondent pas.")])
 
 
@@ -149,6 +175,22 @@ def build_whatsapp_link(client_name, client_phone, invoice, stage):
 
 # --- Auth routes ---------------------------------------------------------
 
+def send_confirmation_email(email, token):
+    confirm_url = url_for("confirm_email", token=token, _external=True)
+    body = (
+        f"Bonjour,\n\n"
+        f"Confirmez votre compte RelanceFacile en cliquant sur ce lien "
+        f"(valable {CONFIRM_TOKEN_VALIDITY_HOURS}h) :\n\n{confirm_url}\n\n"
+        f"Si vous n'êtes pas à l'origine de cette inscription, ignorez cet email."
+    )
+    sent = mailer.send_email(email, "Confirmez votre compte RelanceFacile", body)
+    if not sent:
+        # Mode dégradé (SMTP non configuré) : on affiche le lien directement
+        # pour ne pas bloquer les tests avant configuration d'un vrai envoi.
+        app.logger.warning("Lien de confirmation (email non envoyé) : %s", confirm_url)
+    return sent
+
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
@@ -162,13 +204,66 @@ def register():
             if existing:
                 flash("Un compte existe déjà avec cet email.", "error")
                 return render_template("register.html", form=form)
+            token = secrets.token_urlsafe(32)
             conn.execute(
-                "INSERT INTO users (email, password_hash) VALUES (?, ?)",
-                (form.email.data.lower(), generate_password_hash(form.password.data)),
+                """INSERT INTO users (email, password_hash, confirm_token, confirm_token_created_at)
+                   VALUES (?, ?, ?, datetime('now'))""",
+                (form.email.data.lower(), generate_password_hash(form.password.data), token),
             )
-        flash("Compte créé. Connecte-toi.", "success")
+        email_sent = send_confirmation_email(form.email.data.lower(), token)
+        if email_sent:
+            flash("Compte créé. Vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.", "success")
+        else:
+            flash(
+                "Compte créé, mais l'envoi d'email n'est pas encore configuré sur ce "
+                "serveur — contacte l'administrateur pour confirmer ton compte manuellement.",
+                "error",
+            )
         return redirect(url_for("login"))
     return render_template("register.html", form=form)
+
+
+@app.route("/confirm/<token>")
+def confirm_email(token):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE confirm_token = ?", (token,)
+        ).fetchone()
+        if not row:
+            flash("Lien de confirmation invalide ou déjà utilisé.", "error")
+            return redirect(url_for("login"))
+
+        created_at = datetime.strptime(row["confirm_token_created_at"], "%Y-%m-%d %H:%M:%S")
+        if datetime.utcnow() - created_at > timedelta(hours=CONFIRM_TOKEN_VALIDITY_HOURS):
+            flash("Ce lien de confirmation a expiré. Demande un nouveau lien.", "error")
+            return redirect(url_for("resend_confirmation"))
+
+        conn.execute(
+            "UPDATE users SET email_confirmed = 1, confirm_token = NULL WHERE id = ?",
+            (row["id"],),
+        )
+    flash("Email confirmé. Tu peux te connecter.", "success")
+    return redirect(url_for("login"))
+
+
+@app.route("/resend-confirmation", methods=["GET", "POST"])
+def resend_confirmation():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        with get_db() as conn:
+            row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+            if row and not row["email_confirmed"]:
+                token = secrets.token_urlsafe(32)
+                conn.execute(
+                    "UPDATE users SET confirm_token = ?, confirm_token_created_at = datetime('now') WHERE id = ?",
+                    (token, row["id"]),
+                )
+                send_confirmation_email(email, token)
+        # Message volontairement identique que le compte existe ou non,
+        # pour ne pas révéler quels emails sont déjà inscrits.
+        flash("Si ce compte existe et n'est pas encore confirmé, un nouveau lien vient d'être envoyé.", "success")
+        return redirect(url_for("login"))
+    return render_template("resend_confirmation.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -182,6 +277,12 @@ def login():
                 "SELECT * FROM users WHERE email = ?", (form.email.data.lower(),)
             ).fetchone()
         if row and check_password_hash(row["password_hash"], form.password.data):
+            if not row["email_confirmed"]:
+                flash(
+                    "Confirme ton adresse email avant de te connecter (vérifie ta boîte mail).",
+                    "error",
+                )
+                return render_template("login.html", form=form)
             login_user(User(row))
             return redirect(url_for("dashboard"))
         flash("Email ou mot de passe incorrect.", "error")
@@ -207,17 +308,34 @@ def home():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    status_filter = request.args.get("filter", "all")
+    if status_filter not in ("all", "paid", "unpaid"):
+        status_filter = "all"
+
+    query = """
+        SELECT invoices.*, clients.name AS client_name, clients.phone AS client_phone
+        FROM invoices
+        JOIN clients ON clients.id = invoices.client_id
+        WHERE invoices.user_id = ?
+    """
+    params = [current_user.id]
+    if status_filter != "all":
+        query += " AND invoices.status = ?"
+        params.append(status_filter)
+    query += " ORDER BY invoices.status ASC, invoices.due_date ASC"
+
     with get_db() as conn:
-        invoices = conn.execute(
+        invoices = conn.execute(query, params).fetchall()
+        totals = conn.execute(
             """
-            SELECT invoices.*, clients.name AS client_name, clients.phone AS client_phone
-            FROM invoices
-            JOIN clients ON clients.id = invoices.client_id
-            WHERE invoices.user_id = ?
-            ORDER BY invoices.status ASC, invoices.due_date ASC
+            SELECT
+                COALESCE(SUM(amount), 0) AS total_invoiced,
+                COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) AS total_paid,
+                COALESCE(SUM(CASE WHEN status = 'unpaid' THEN amount ELSE 0 END), 0) AS total_unpaid
+            FROM invoices WHERE user_id = ?
             """,
             (current_user.id,),
-        ).fetchall()
+        ).fetchone()
 
     enriched = []
     for inv in invoices:
@@ -229,13 +347,15 @@ def dashboard():
                 wa_link = build_whatsapp_link(inv["client_name"], inv["client_phone"], inv, stage)
         enriched.append({**dict(inv), "stage": stage, "wa_link": wa_link})
 
-    unpaid_count = sum(1 for i in enriched if i["status"] == "unpaid")
+    unpaid_count = sum(1 for i in enriched if i["status"] == "unpaid") if status_filter == "all" else None
     return render_template(
         "dashboard.html",
         invoices=enriched,
         unpaid_count=unpaid_count,
         subscription_status=current_user.subscription_status,
         free_limit=FREE_INVOICE_LIMIT,
+        current_filter=status_filter,
+        totals=dict(totals),
     )
 
 

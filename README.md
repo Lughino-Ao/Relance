@@ -6,15 +6,41 @@ testée de bout en bout (voir "Ce qui a été vérifié" ci-dessous).
 ## Fonctionnalités
 
 - Inscription / connexion (mots de passe hashés, sessions sécurisées)
+- **Mot de passe fort obligatoire** : 8 caractères min., majuscule, minuscule, chiffre — validation serveur + jauge de force en direct
+- **Confirmation d'email obligatoire avant connexion**, avec lien de renvoi si non reçu
 - Gestion des clients
 - Création de factures (client, montant, devise, échéance)
 - Calcul automatique du stade de relance selon le retard : J+3 (poli),
   J+10 (ferme), J+20 (final)
 - Génération d'un lien WhatsApp pré-rempli en un clic pour chaque relance
   (aucun coût, aucune API tierce payante)
-- Marquage manuel "payée"
+- **Filtres Toutes / Impayées / Payées** sur le tableau de bord
+- **Totaux réels** (facturé, encaissé, en attente) calculés depuis la base — pas de chiffres inventés
+- **Section "Comment ça marche"** en 3 étapes + démo interactive sur la page d'accueil
 - Limite de 5 factures/mois sur le plan gratuit, appliquée côté serveur
-- Page d'abonnement avec emplacement pour votre Stripe Payment Link
+- Page d'abonnement avec emplacement pour votre lien de paiement (Stripe / CinetPay / FedaPay)
+
+## Configuration de l'envoi d'email (confirmation de compte)
+
+Sans configuration, l'application fonctionne quand même : le lien de
+confirmation est simplement écrit dans les logs du serveur au lieu d'être
+envoyé par email — utile pour tester, mais **inutilisable pour de vrais
+utilisateurs** qui n'ont pas accès à tes logs.
+
+Pour activer l'envoi réel via Gmail (gratuit, sans domaine à vérifier) :
+
+1. Active la validation en 2 étapes sur le compte Gmail que tu veux utiliser pour l'envoi
+2. Crée un "mot de passe d'application" : myaccount.google.com → Sécurité → Mots de passe des applications
+3. Ajoute ces variables d'environnement sur Render :
+   - `SMTP_HOST` = `smtp.gmail.com`
+   - `SMTP_PORT` = `587`
+   - `SMTP_USER` = ton adresse Gmail complète
+   - `SMTP_PASSWORD` = le mot de passe d'application généré (pas ton mot de passe Gmail habituel)
+   - `SMTP_FROM` = la même adresse que `SMTP_USER`
+
+Limite non vérifiée : Gmail limite l'envoi à environ 500 emails/jour sur un
+compte standard — largement suffisant pour démarrer, à surveiller si le
+volume augmente.
 
 ## Ce qui a été vérifié (pas juste écrit — exécuté et testé)
 
